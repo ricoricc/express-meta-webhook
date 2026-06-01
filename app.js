@@ -34,12 +34,22 @@ app.get("/webhook", (req, res) => {
 // RECEIVE WHATSAPP EVENTS
 // ==================================================
 app.post("/webhook", (req, res) => {
-  console.log(
-    "Webhook Event:",
-    JSON.stringify(req.body, null, 2)
-  );
+  const body = req.body;
 
-  res.sendStatus(200);
+  // Verify that this is a WhatsApp event
+  if (body.object === "whatsapp_business_account") {
+    body.entry.forEach((entry) => {
+      entry.changes.forEach((change) => {
+        console.log("WhatsApp Event Data:", JSON.stringify(change.value, null, 2));
+      });
+    });
+
+    // Return 200 to acknowledge receipt
+    return res.status(200).send("EVENT_RECEIVED");
+  } else {
+    // Return 404 if the event is not from WhatsApp
+    return res.sendStatus(404);
+  }
 });
 
 // ==================================================
