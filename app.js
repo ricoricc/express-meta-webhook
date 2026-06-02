@@ -1,67 +1,37 @@
-const express = require("express");
+// Import Express.js
+const express = require('express');
 
+// Create an Express app
 const app = express();
-const port = process.env.PORT || 3001;
 
-// Required for POST webhook payloads
+// Middleware to parse JSON bodies
 app.use(express.json());
 
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+// Set port and verify_token
+const port = process.env.PORT || 3000;
+const verifyToken = process.env.VERIFY_TOKEN;
 
-// ==================================================
-// WEBHOOK VERIFICATION
-// ==================================================
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+// Route for GET requests
+app.get('/', (req, res) => {
+  const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
 
-  console.log("Verification Request:", req.query);
-
-  if (
-    mode === "subscribe" &&
-    token === VERIFY_TOKEN
-  ) {
-    console.log("Webhook Verified");
-    return res.status(200).send(challenge);
-  }
-
-  console.log("Verification Failed");
-  return res.sendStatus(403);
-});
-
-// ==================================================
-// RECEIVE WHATSAPP EVENTS
-// ==================================================
-app.post("/webhook", (req, res) => {
-  const body = req.body;
-
-  // Verify that this is a WhatsApp event
-  if (body.object === "whatsapp_business_account") {
-    body.entry.forEach((entry) => {
-      entry.changes.forEach((change) => {
-        console.log("WhatsApp Event Data:", JSON.stringify(change.value, null, 2));
-      });
-    });
-
-    // Return 200 to acknowledge receipt
-    return res.status(200).send("EVENT_RECEIVED");
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log('WEBHOOK VERIFIED');
+    res.status(200).send(challenge);
   } else {
-    // Return 404 if the event is not from WhatsApp
-    return res.sendStatus(404);
+    res.status(403).end();
   }
 });
 
-// ==================================================
-// OPTIONAL ROOT PAGE
-// ==================================================
-app.get("/", (req, res) => {
-  res.send("WhatsApp Webhook Running");
+// Route for POST requests
+app.post('/', (req, res) => {
+  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`\n\nWebhook received ${timestamp}\n`);
+  console.log(JSON.stringify(req.body, null, 2));
+  res.status(200).end();
 });
 
-const server = app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+// Start the server
+app.listen(port, () => {
+  console.log(`\nListening on port ${port}\n`);
 });
-
-server.keepAliveTimeout = 120 * 1000;
-server.headersTimeout = 120 * 1000;
